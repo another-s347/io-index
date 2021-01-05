@@ -1,0 +1,21 @@
+[package]
+name = "io-index"
+version = "0.1.0"
+authors = ["skye347 <s347419313@gmail.com>"]
+edition = "2018"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+ybc = "0.1.6"
+yew = "0.17"
+wasm-bindgen = "0.2.67"
+yewtil = { version="*", features = ["future"] }
+wasm-bindgen-futures = "0.4"
+reqwest = { version="0.10" }
+anyhow = "1.0.37"
+xmlparser = "0.13.3"
+xml-rs = "0.8.3"
+chrono = "0.4.19"
+url = "2.2.0"
