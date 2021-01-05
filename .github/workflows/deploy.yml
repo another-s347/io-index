@@ -104,6 +104,9 @@ jobs:
         with:
           # Optional version of wasm-pack to install(eg. 'v0.9.1', 'latest')
           version: 'latest'
+      
+      - name: Build
+        run: wasm-pack build --target web --out-name wasm --out-dir ./static
 
       - name: LS
         run: ls
