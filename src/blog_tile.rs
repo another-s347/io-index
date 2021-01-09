@@ -1,27 +1,29 @@
+use chrono::{Duration, prelude::*};
 use fetch::FetchTask;
 use wasm_bindgen::prelude::*;
+use xml::reader::{EventReader, XmlEvent};
 use ybc::NavbarFixed::Top;
 use ybc::NavbarItemTag::{Div, A};
 use ybc::TileCtx::{Ancestor, Child, Parent};
 use ybc::TileSize::Four;
-use yew::{services::ConsoleService, Properties};
 use yew::{
     format::Nothing,
     prelude::*,
     services::fetch::Response,
     services::fetch::{self, FetchOptions},
 };
+use yew::{services::ConsoleService, Properties};
 use yewtil::future::LinkFuture;
-use xml::reader::{EventReader, XmlEvent};
-use chrono::prelude::*;
 
 use crate::lang::Language;
+
+pub mod blog_card;
 
 #[derive(Debug)]
 struct Blog {
     title: String,
     link: String,
-    last_update: DateTime<Utc>
+    last_update: DateTime<Utc>,
 }
 
 impl Default for Blog {
@@ -35,9 +37,9 @@ impl Default for Blog {
 }
 
 #[derive(Debug)]
-struct Blogs {
+pub struct Blogs {
     last_update: DateTime<Utc>,
-    blogs: Vec<Blog>
+    blogs: Vec<Blog>,
 }
 
 pub struct BlogTile {
@@ -45,7 +47,7 @@ pub struct BlogTile {
     language: Language,
     blogs: BlogStatus,
     fetch_task: Option<FetchTask>,
-    props: BlogProperty
+    props: BlogProperty,
 }
 
 #[derive(Properties, Clone)]
@@ -62,7 +64,7 @@ pub enum BlogMessage {
 enum BlogStatus {
     Fetching,
     Done(Blogs),
-    Err(String)
+    Err(String),
 }
 
 impl Component for BlogTile {
@@ -78,7 +80,7 @@ impl Component for BlogTile {
             language: Language::from_lang(props.lang),
             blogs: BlogStatus::Fetching,
             fetch_task: Some(task),
-            props
+            props,
         }
     }
 
@@ -104,29 +106,29 @@ impl Component for BlogTile {
 
     fn change(&mut self, _props: Self::Properties) -> ShouldRender {
         if self.props.lang == _props.lang {
-            true
-        }
-        else {
-            self.props = _props;
-            self.fetch_task = Some(fetch_sitemap(&self.link, self.props.lang));
             false
+        } else {
+            self.props = _props;
+            self.language = Language::from_lang(self.props.lang);
+            self.fetch_task = Some(fetch_sitemap(&self.link, self.props.lang));
+            true
         }
     }
 
     fn view(&self) -> Html {
-        match &self.blogs {
+        let status = match &self.blogs {
             BlogStatus::Fetching => {
                 html! {
                     <>
-                        <p>{"Fetching"}</p>
+                    <progress class="progress is-small is-primary" max="100"> {"12312"} </progress>
                     </>
                 }
             }
             BlogStatus::Done(blogs) => {
+                let duration = crate::util::now() - blogs.last_update;
                 html! {
                     <>
-                        <p>{blogs.last_update}</p>
-                        { blogs.blogs.iter().map(render_blog).collect::<Html>() }
+                        {self.language.last_update}{":"}{display_duration(duration, &self.language)}
                     </>
                 }
             }
@@ -137,6 +139,50 @@ impl Component for BlogTile {
                     </>
                 }
             }
+        };
+        let content = match &self.blogs {
+            BlogStatus::Fetching => {
+                html! {
+                    <>
+                    </>
+                }
+            }
+            BlogStatus::Done(blogs) => {
+                let duration = crate::util::now() - blogs.last_update;
+                html! {
+                    <>
+                        <div class="columns is-gapless">
+                        { blogs.blogs.iter().map(render_blog).collect::<Html>() }
+                        </div>
+                    </>
+                }
+            }
+            BlogStatus::Err(err) => {
+                html! {
+                    <>
+                        <p>{err}</p>
+                    </>
+                }
+            }
+        };
+        html! {
+            <>
+                <ybc::Media>
+                    <div class="media-left" style="display:flex; padding:10px;">
+                    <figure class="image is-48x48">
+                    <img src="https://bulma.io/images/placeholders/96x96.png" alt="Placeholder image" />
+                    </figure>
+                    <ybc::Title>{"Blogs"}</ybc::Title>
+                    </div>
+                    <div class="media-content">
+                    <p class="title is-4"><img src="https://github.com/another-s347/md-pages/workflows/Auto-Deploy/badge.svg?event=push" /></p>
+                    <p class="subtitle is-6">{status}</p>
+                  </div>
+                </ybc::Media>
+                <div class="content">
+                { content }
+                </div>
+            </>
         }
     }
 
@@ -146,37 +192,70 @@ impl Component for BlogTile {
 }
 
 fn render_blog(blog: &Blog) -> Html {
+    let title = if blog.title.is_empty() { "Empty title" } else { blog.title.as_str() };
     html! {
-        <>
-            <a href={blog.link.as_str()}>{&blog.title}</a>
-        </>
+        <div class="column">
+        <ybc::Message>
+            <div class="message-header" style="display:block;">
+                <h4 class="title is-4 is-spaced">
+                    {title}
+                </h4>
+                <ybc::Subtitle classes="is-5">{&blog.last_update}</ybc::Subtitle>
+
+                <span class="tag">
+                {"Tag label"}
+                </span>
+
+                <span class="tag">
+                {"Tag label"}
+                </span>
+            </div>
+            <ybc::MessageBody>
+                {"blablablabla"}
+            </ybc::MessageBody>
+            // <a href={blog.link.as_str()}>{title}</a>
+        </ybc::Message>
+        </div>
     }
 }
 
-fn fetch_sitemap(link: &ComponentLink<BlogTile>, lang:&'static str) -> FetchTask {
+fn display_duration(duration:Duration, lang: &Language) -> String {
+    if duration.num_seconds() < 0 {
+        panic!()
+    }
+    if duration.num_weeks() > 0 {
+        return format!("{} {} {}", duration.num_weeks(), lang.time_week, lang.time_ago)
+    }
+    else if duration.num_days() > 0 {
+        return format!("{} {} {}", duration.num_days(), lang.time_day, lang.time_ago)
+    }
+    else if duration.num_hours() > 0 {
+        return format!("{} {} {}", duration.num_hours(), lang.time_hour, lang.time_ago)
+    }
+    else if duration.num_minutes() > 0 {
+        return format!("{} {} {}", duration.num_minutes(), lang.time_minutes, lang.time_ago)
+    }
+    else {
+        return lang.time_just.to_string()
+    }
+}
+
+fn fetch_sitemap(link: &ComponentLink<BlogTile>, lang: &'static str) -> FetchTask {
     ConsoleService::log("fetch");
     ConsoleService::log(lang);
     let url = match lang {
         "en" => "https://another-s347.github.io/blogs-en/custom_sitemap.xml",
         "zh" => "http://another-s347.github.io/blogs/custom_sitemap.xml",
-        _ => panic!("unknown lang")
+        _ => panic!("unknown lang"),
     };
     let callback = link.callback(
         |response: Response<Result<String, anyhow::Error>>| -> BlogMessage {
             match response.body() {
-                Ok(s) => {
-                    match parse_sitemap_to_blog(s.as_str()) {
-                        Ok(s) => {
-                            BlogMessage::Done(s)
-                        }
-                        Err(err) => {
-                            BlogMessage::Error(err.to_string())
-                        }
-                    }
-                }
-                Err(err) => {
-                    BlogMessage::Error(err.to_string())
-                }
+                Ok(s) => match parse_sitemap_to_blog(s.as_str()) {
+                    Ok(s) => BlogMessage::Done(s),
+                    Err(err) => BlogMessage::Error(err.to_string()),
+                },
+                Err(err) => BlogMessage::Error(err.to_string()),
             }
         },
     );
@@ -187,19 +266,20 @@ fn fetch_sitemap(link: &ComponentLink<BlogTile>, lang:&'static str) -> FetchTask
     let request = fetch::Request::get(url)
         .body(Nothing)
         .expect("build request failed");
-    yew::services::FetchService::fetch_with_options(request, options, callback).expect("fetch failed")
+    yew::services::FetchService::fetch_with_options(request, options, callback)
+        .expect("fetch failed")
 }
 
 enum Parser {
     Enter(Blog, SetState),
-    Exit
+    Exit,
 }
 
 enum SetState {
     Loc,
     LastUpdate,
     Title,
-    None
+    None,
 }
 
 impl Parser {
@@ -209,22 +289,20 @@ impl Parser {
 
     pub fn set(&mut self, data: String) {
         match self {
-            Parser::Enter(blog, state) => {
-                match std::mem::replace(state, SetState::None) {
-                    SetState::Loc => {
-                        blog.link = data;
-                    }
-                    SetState::LastUpdate => {
-                        blog.last_update = Utc.timestamp_millis(data.parse().unwrap());
-                    }
-                    SetState::Title => {
-                        blog.title = data;
-                    }
-                    SetState::None => {
-                        panic!("invalid state")
-                    }
+            Parser::Enter(blog, state) => match std::mem::replace(state, SetState::None) {
+                SetState::Loc => {
+                    blog.link = data;
                 }
-            }
+                SetState::LastUpdate => {
+                    blog.last_update = Utc.timestamp_millis(data.parse().unwrap());
+                }
+                SetState::Title => {
+                    blog.title = data;
+                }
+                SetState::None => {
+                    panic!("invalid state")
+                }
+            },
             Parser::Exit => {
                 panic!("invalid state")
             }
@@ -278,8 +356,12 @@ fn parse_sitemap_to_blog(data: &str) -> anyhow::Result<Blogs> {
         }
     }
 
-    let last_update = ret.iter().map(|x|x.last_update).max().unwrap_or(Utc.timestamp_millis(0));
-    
+    let last_update = ret
+        .iter()
+        .map(|x| x.last_update)
+        .max()
+        .unwrap_or(Utc.timestamp_millis(0));
+
     Ok(Blogs {
         last_update,
         blogs: ret,
@@ -320,5 +402,5 @@ fn test_parse_sitemap() {
        -->
     </urlset>
     "#;
-    println!("{:#?}",parse_sitemap_to_blog(xml));
+    println!("{:#?}", parse_sitemap_to_blog(xml));
 }

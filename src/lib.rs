@@ -1,3 +1,5 @@
+#![recursion_limit="256"]
+
 use lang::Language;
 use wasm_bindgen::prelude::*;
 use yew::prelude::*;
@@ -10,6 +12,7 @@ use blog_tile::BlogTile;
 
 mod lang;
 mod blog_tile;
+mod util;
 
 struct Model {
     link: ComponentLink<Self>,
@@ -60,9 +63,27 @@ impl Component for Model {
     fn view(&self) -> Html {
         html! {
             <div>
-                <ybc::Navbar navbrand=self.view_navbrand() navstart=self.view_navstart() navend=self.view_lang_drop() />
+                <ybc::Navbar spaced=true padded=true transparent=true navburger=true navbrand=self.view_navbrand() navstart=self.view_navstart() navend=self.view_lang_drop() classes="is-dark" />
                 // <ybc::Button onclick=self.link.callback(|x| Msg::AddOne)>{ "+1" }</ybc::Button>
+                <section class="hero is-primary">
+                <div class="hero-body">
+                    <div class="container">
+                    <h1 class="title">
+                        {"建设中... Constructing..."}
+                    </h1>
+                    </div>
+                </div>
+                </section>
                 { self.view_blogs() }
+                <footer class="footer">
+                    <div class="content has-text-centered">
+                        <p>
+                        {"The source code is licensed "}
+                        <a href="http://opensource.org/licenses/mit-license.php">{"MIT"}</a>{". The website content
+                        is licensed "}<a href="http://creativecommons.org/licenses/by-nc-sa/4.0/">{"CC BY NC SA 4.0"}</a>{"."}
+                        </p>
+                    </div>
+                </footer>
             </div>
         }
     }
@@ -166,15 +187,24 @@ impl Model {
         html! {
             <>
             <ybc::Container fluid=true>
-            <ybc::Tile ctx=Ancestor>
-              <ybc::Tile ctx=Parent vertical=true>
-                <ybc::Tile ctx=Child classes="box">
-                <ybc::Title>{"Blogs"}</ybc::Title>
-                  <img src="https://github.com/another-s347/md-pages/workflows/Auto-Deploy/badge.svg?event=push" />
+            <ybc::Tile ctx=Ancestor vertical=true>
+              <ybc::Tile>
+              <ybc::Tile ctx=Parent>
+                <div class="tile is-child box" style="padding:0px;">
                   <BlogTile lang={self.language.lang} />
+                </div>
                 </ybc::Tile>
-                /* .. snip .. more tiles here .. */
+                <ybc::Tile ctx=Parent>
+                <div class="tile is-child box" style="padding:0px;">
+                    <BlogTile lang={self.language.lang} />
+                </div>
               </ybc::Tile>
+            </ybc::Tile>
+            <ybc::Tile ctx=Parent>
+                <div class="tile is-child box" style="padding:0px;">
+                    <p>{"About"}</p>
+                </div>
+            </ybc::Tile>
             </ybc::Tile>
           </ybc::Container>
             </>
